@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold mb-0"><i class="fa-solid fa-user-pen text-primary"></i> Hồ sơ cá nhân & Dịch vụ</h2>
+    <a href="/" class="btn btn-dark fw-bold shadow-sm border-0"><i class="fa-solid fa-arrow-left me-2"></i>Quay lại Dashboard</a>
+</div>
+
+{% if success %}
+<div class="alert alert-success alert-dismissible fade show fw-bold shadow-sm border-0" role="alert">
+    <i class="fa-solid fa-circle-check me-2"></i>{{ success }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+{% endif %}
+
+{% if error %}
+<div class="alert alert-danger alert-dismissible fade show fw-bold shadow-sm border-0" role="alert">
+    <i class="fa-solid fa-triangle-exclamation me-2"></i>{{ error }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+{% endif %}
+
+<div class="row {% if session.get('role') == 'admin' %}justify-content-center{% endif %}">
+    
+    <div class="{% if session.get('role') == 'admin' %}col-lg-8{% else %}col-lg-7{% endif %} mb-4">
+        <div class="card shadow border-0 rounded-4 bg-white">
+            <div class="card-header bg-dark text-white fw-bold py-3"><i class="fa-solid fa-user-shield me-2"></i>Chỉnh sửa hồ sơ</div>
+            <div class="card-body p-4">
+                <form method="POST" action="/profile">
+                    <input type="hidden" name="action" value="update_profile">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Tên đăng nhập (Username):</label>
+                        <input type="text" class="form-control form-control-lg bg-light" value="{{ username }}" disabled>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Họ và Tên đầy đủ:</label>
+                        <input type="text" class="form-control form-control-lg" name="full_name" value="{{ user_data[0] or '' }}" placeholder="Nhập họ và tên...">
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Số điện thoại:</label>
+                            <input type="text" class="form-control form-control-lg" name="phone" value="{{ user_data[2] or '' }}" placeholder="VD: 0987654321">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Địa chỉ:</label>
+                            <input type="text" class="form-control form-control-lg" name="address" value="{{ user_data[1] or '' }}" placeholder="VD: Tòa A, P.101">
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Đổi mật khẩu mới (Nếu cần):</label>
+                        <input type="password" class="form-control form-control-lg" name="new_password" placeholder="Bỏ trống nếu không muốn đổi">
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-lg w-100 fw-bold shadow-sm"><i class="fa-solid fa-floppy-disk me-2"></i>Lưu cập nhật</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    {% if session.get('role') != 'admin' %}
+    <div class="col-lg-5 mb-4">
+        <div class="card shadow border-0 rounded-4 bg-white h-100">
+            <div class="card-header bg-success text-white fw-bold py-3">
+                <i class="fa-solid fa-id-card me-2"></i>Dịch vụ vé tháng
+            </div>
+            <div class="card-body p-4">
+                {% if user_data[3] == 1 %}
+                    <div class="text-center mb-4">
+                        <h6 class="text-muted text-uppercase fw-bold mb-2">Biển số đăng ký</h6>
+                        <span class="badge bg-dark fs-3 px-4 py-2 shadow-sm border border-secondary">{{ user_data[4] }}</span>
+                    </div>
+                    
+                    <ul class="list-group list-group-flush mb-4">
+                        <li class="list-group-item px-0 d-flex justify-content-between align-items-center">
+                            <span class="fw-bold text-muted"><i class="fa-regular fa-calendar-xmark me-2"></i>Ngày hết hạn:</span>
+                            {% if is_expired %}
+                                <span class="text-danger fw-bold">{{ expiry_str }} <br><small>(Đã hết hạn)</small></span>
+                            {% else %}
+                                <span class="text-success fw-bold">{{ expiry_str }} <br><small>(Còn hạn)</small></span>
+                            {% endif %}
+                        </li>
+                        <li class="list-group-item px-0 d-flex justify-content-between align-items-center">
+                            <span class="fw-bold text-muted"><i class="fa-solid fa-file-invoice-dollar me-2"></i>Dư nợ cước:</span>
+                            {% if user_data[5] > 0 %}
+                                <span class="text-danger fw-bold fs-5">{{ "{:,.0f}".format(user_data[5]) }} đ</span>
+                            {% else %}
+                                <span class="text-success fw-bold fs-5">0 đ</span>
+                            {% endif %}
+                        </li>
+                    </ul>
+
+                    <form method="POST" action="/profile" class="mb-3">
+                        <input type="hidden" name="action" value="renew_monthly">
+                        <button type="submit" class="btn btn-warning btn-lg w-100 fw-bold shadow-sm text-dark mb-2">
+                            <i class="fa-solid fa-rotate-right me-2"></i>Gia hạn thêm 30 ngày (150k)
+                        </button>
+                    </form>
+
+                    {% if user_data[5] > 0 %}
+                    <form method="POST" action="/user_pay">
+                        <button type="submit" class="btn btn-success btn-lg w-100 fw-bold shadow-sm">
+                            <i class="fa-solid fa-qrcode me-2"></i>Thanh Toán Nợ (Giả lập)
+                        </button>
+                    </form>
+                    {% endif %}
+                    
+                {% else %}
+                    <div class="text-center text-muted mb-4 mt-3">
+                        <i class="fa-solid fa-car-side fa-4x mb-3 text-secondary opacity-50"></i>
+                        <h5>Chưa đăng ký vé tháng</h5>
+                        <p class="small">Đăng ký ngay để ra vào bãi không giới hạn chỉ với 150.000đ/tháng.</p>
+                    </div>
+                    
+                    <form method="POST" action="/profile">
+                        <input type="hidden" name="action" value="buy_monthly">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Nhập biển số xe của bạn:</label>
+                            <input type="text" class="form-control form-control-lg text-uppercase fw-bold text-center" name="plate_number" placeholder="VD: 30A-123.45" required>
+                        </div>
+                        <button type="submit" class="btn btn-success btn-lg w-100 fw-bold shadow-sm">
+                            <i class="fa-solid fa-cart-plus me-2"></i>Đăng Ký Vé Tháng
+                        </button>
+                    </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

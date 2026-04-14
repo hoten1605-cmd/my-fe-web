@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold mb-0">
+        {% if role == 'admin' %}
+            <i class="fa-solid fa-clock-rotate-left text-warning"></i> Quản lý bãi xe
+        {% else %}
+            <i class="fa-solid fa-clock-rotate-left text-warning"></i> Lịch sử gửi xe của bạn
+        {% endif %}
+    </h2>
+    <a href="/" class="btn btn-dark fw-bold shadow-sm border-0"><i class="fa-solid fa-arrow-left me-2"></i>Quay lại Dashboard</a>
+</div>
+
+<div class="card shadow border-0 rounded-4 overflow-hidden bg-white">
+    <div class="card-header bg-dark text-white fw-bold py-3 d-flex justify-content-between align-items-center">
+        <span><i class="fa-solid fa-list me-2"></i> Danh sách biển số</span>
+        
+        {% if role == 'admin' %}
+        <div class="d-flex align-items-center">
+            <label class="me-2 text-light small fw-bold mb-0"><i class="fa-solid fa-filter me-1"></i></label>
+            <select id="statusFilter" class="form-select form-select-sm fw-bold border-0 shadow-sm text-dark" style="width: auto; cursor: pointer;" onchange="filterTable()">
+                <option value="all">Hiển thị tất cả</option>
+                <option value="parking">🚗 Đang đỗ</option>
+                <option value="checkout">✅ Đã rời đi</option>
+            </select>
+        </div>
+        {% endif %}
+    </div>
+    
+    <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
+        <table class="table table-hover table-striped mb-0 align-middle text-center" id="historyTable">
+            <thead class="table-light sticky-top">
+                <tr>
+                    <th class="py-3">Biển số</th>
+                    <th class="py-3">Thời gian vào (Check-in)</th>
+                    <th class="py-3">Thời gian ra (Check-out)</th>
+                    <th class="py-3">Trạng thái</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in logs %}
+                <tr class="history-row" data-status="{% if log[2] %}checkout{% else %}parking{% endif %}">
+                    <td class="fw-bold"><span class="badge bg-dark fs-6 shadow-sm px-3 py-2 border border-2 border-secondary-subtle">{{ log[0] }}</span></td>
+                    
+                    <td><span class="text-success fw-bold"><i class="fa-solid fa-arrow-right-to-bracket me-1"></i>{{ log[1] }}</span></td>
+                    
+                    <td>
+                        {% if log[2] %}
+                            <span class="text-danger fw-bold"><i class="fa-solid fa-arrow-right-from-bracket me-1"></i>{{ log[2] }}</span>
+                        {% else %}
+                            <span class="text-muted fst-italic">-- : --</span>
+                        {% endif %}
+                    </td>
+                    
+                    <td>
+                        {% if log[2] %}
+                            <span class="badge bg-secondary shadow-sm px-3 py-2"><i class="fa-solid fa-road me-1"></i> Đã rời đi</span>
+                        {% else %}
+                            <span class="badge bg-success shadow-sm px-3 py-2"><i class="fa-solid fa-square-parking fa-beat me-1"></i> Đang đỗ</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="4" class="py-5 text-muted">
+                        <i class="fa-solid fa-folder-open fs-1 mb-3"></i><br>
+                        <h5>Chưa có dữ liệu lịch sử nào.</h5>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    function filterTable() {
+        var filterValue = document.getElementById("statusFilter").value;
+        var rows = document.getElementsByClassName("history-row");
+        
+        for (var i = 0; i < rows.length; i++) {
+            var rowStatus = rows[i].getAttribute("data-status");
+            
+            if (filterValue === "all") {
+                rows[i].style.display = "";
+            } else if (filterValue === rowStatus) {
+                rows[i].style.display = ""; 
+            } else {
+                rows[i].style.display = "none"; 
+            }
+        }
+    }
+</script>
+{% endblock %}

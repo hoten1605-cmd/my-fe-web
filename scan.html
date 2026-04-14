@@ -1,0 +1,345 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold mb-0"><i class="fa-solid fa-camera text-primary"></i> Nhận diện biển số xe bằng AI</h2>
+    <a href="/" class="btn btn-dark fw-bold shadow-sm border-0"><i class="fa-solid fa-arrow-left me-2"></i>Quay lại Dashboard</a>
+</div>
+
+<div class="row">
+    <div class="col-lg-7 mb-4">
+        <div class="card shadow border-0 rounded-4 bg-white">
+            <div class="card-header bg-white border-bottom-0 pt-4 pb-0 px-4">
+                <ul class="nav nav-tabs fw-bold" id="scanTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active text-dark" id="image-tab" data-bs-toggle="tab" data-bs-target="#image-scan" type="button" role="tab"><i class="fa-regular fa-image text-primary me-2"></i>Tải ảnh lên</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link text-dark" id="camera-tab" data-bs-toggle="tab" data-bs-target="#camera-scan" type="button" role="tab"><i class="fa-solid fa-video text-danger me-2"></i>Quét bằng camera (Realtime)</button>
+                    </li>
+                </ul>
+            </div>
+            
+            <div class="card-body p-4 tab-content" id="scanTabsContent">
+                
+                <div class="tab-pane fade show active" id="image-scan" role="tabpanel">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Chọn ảnh:</label>
+                        <input class="form-control form-control-lg" type="file" id="fileInput" accept="image/*">
+                    </div>
+                    <div class="bg-light rounded-4 d-flex justify-content-center align-items-center mb-3" style="height: 350px; border: 2px dashed #dee2e6; overflow: hidden;">
+                        <img id="imagePreview" src="" style="display: none; max-width: 100%; max-height: 100%; object-fit: contain;">
+                        <span id="imagePlaceholder" class="text-muted"><i class="fa-solid fa-image fa-3x mb-2 d-block text-center"></i>Chưa có ảnh nào</span>
+                    </div>
+                    <button id="btnUpload" class="btn btn-primary btn-lg w-100 fw-bold shadow-sm"><i class="fa-solid fa-magnifying-glass me-2"></i>Nhận diện ảnh</button>
+                </div>
+
+                <div class="tab-pane fade" id="camera-scan" role="tabpanel">
+                    <div class="bg-dark rounded-4 d-flex justify-content-center align-items-center mb-3 position-relative" style="height: 350px; overflow: hidden; border: 3px solid #333;" id="videoContainer">
+                        <video id="videoElement" autoplay playsinline style="width: 100%; height: 100%; object-fit: cover;"></video>
+                        <canvas id="canvasElement" style="display:none;"></canvas>
+                        
+                        <div class="position-absolute bottom-0 start-50 translate-middle-x mb-3 text-white fw-bold bg-dark px-3 py-2 rounded-pill shadow-lg border border-secondary" style="opacity: 0.9; font-size: 1.1rem; display: none;" id="livePreviewBox">
+                            <span id="livePreviewText">Đang chờ xe...</span>
+                        </div>
+                    </div>
+                    
+                    <button id="btnStartCamera" class="btn btn-dark btn-lg w-100 fw-bold shadow-sm"><i class="fa-solid fa-video me-2"></i>Bật camera</button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5 mb-4">
+        <div class="card shadow border-0 rounded-4 bg-white h-100">
+            <div class="card-header bg-success text-white fw-bold py-3">
+                <i class="fa-solid fa-clipboard-check me-2"></i>Nhật ký quét
+            </div>
+            <div class="card-body p-4" id="resultContainer" style="max-height: 430px; overflow-y: auto;">
+                <div id="emptyState" class="text-center text-muted mt-5">
+                    <i class="fa-solid fa-shield-halved fa-4x mb-3 text-secondary opacity-50"></i>
+                    <h5>Hệ thống đang sẵn sàng...</h5>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="confirmModal" data-bs-backdrop="static" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow-lg">
+            <div id="modalHeader" class="modal-header bg-warning border-0 rounded-top-4">
+                <h5 class="modal-title fw-bold text-dark" id="modalTitle"><i class="fa-solid fa-bell fa-shake me-2"></i>Yêu cầu xác nhận</h5>
+            </div>
+            <div class="modal-body text-center p-4">
+                <h6 class="text-muted mb-2">Hệ thống nhận diện được biển số:</h6>
+                <h1 class="display-4 fw-bold text-dark mb-2" id="confirmPlate">...</h1>
+                
+                <div class="bg-light rounded-3 p-3 mb-4 mt-3 border border-secondary-subtle">
+                    <h6 class="text-muted mb-1">Trạng thái:</h6>
+                    <h4 class="fw-bold mb-0" id="confirmAction">...</h4>
+                </div>
+            </div>
+            <div class="modal-footer border-0 d-flex justify-content-center pb-4">
+                <button type="button" class="btn btn-secondary btn-lg fw-bold px-4" id="btnCancelConfirm" onclick="cancelConfirmation()"><i class="fa-solid fa-xmark me-2"></i>Hủy bỏ</button>
+                <button type="button" class="btn btn-success btn-lg fw-bold px-4" id="btnConfirmSave" onclick="confirmAndSave()"><i class="fa-solid fa-check me-2"></i>Đồng ý cho qua</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const resultContainer = document.getElementById('resultContainer');
+    const emptyState = document.getElementById('emptyState');
+    let confirmModal; 
+    let plateToConfirm = ""; 
+
+    // TAB 1: TẢI ẢNH
+    const fileInput = document.getElementById('fileInput');
+    const imagePreview = document.getElementById('imagePreview');
+    const imagePlaceholder = document.getElementById('imagePlaceholder');
+    let base64ImageToUpload = null;
+
+    fileInput.addEventListener('change', function() {
+        const file = this.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                imagePreview.src = e.target.result;
+                base64ImageToUpload = e.target.result;
+                imagePreview.style.display = 'block';
+                imagePlaceholder.style.display = 'none';
+            }
+            reader.readAsDataURL(file);
+        }
+    });
+
+    document.getElementById('btnUpload').addEventListener('click', function() {
+        if (!base64ImageToUpload) {
+            alert("Vui lòng chọn ảnh trước!");
+            return;
+        }
+        sendToAPI(base64ImageToUpload); 
+    });
+
+    // TAB 2: QUÉT CAMERA REALTIME
+    const video = document.getElementById('videoElement');
+    const canvas = document.getElementById('canvasElement');
+    const btnStartCamera = document.getElementById('btnStartCamera');
+    const videoContainer = document.getElementById('videoContainer');
+    const livePreviewBox = document.getElementById('livePreviewBox');
+    const livePreviewText = document.getElementById('livePreviewText');
+    
+    let stream = null;
+    let scanInterval = null;
+    let isProcessing = false;
+    let isPaused = false; 
+    let plateBuffer = [];
+    const REQUIRED_MATCHES = 3; 
+
+    btnStartCamera.addEventListener('click', async function() {
+        if (!stream) {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                video.srcObject = stream;
+                
+                btnStartCamera.innerHTML = '<i class="fa-solid fa-video-slash me-2"></i>Tắt camera';
+                btnStartCamera.classList.replace('btn-dark', 'btn-danger');
+                livePreviewBox.style.display = 'block';
+                videoContainer.style.borderColor = '#198754';
+
+                scanInterval = setInterval(autoCaptureAndScan, 1000);
+            } catch (err) {
+                alert("Không thể truy cập camera. Vui lòng thử dùng link http://localhost:5000");
+            }
+        } else {
+            stopCamera();
+        }
+    });
+
+    function stopCamera() {
+        if (stream) {
+            clearInterval(scanInterval);
+            stream.getTracks().forEach(track => track.stop());
+            stream = null;
+            video.srcObject = null;
+            
+            btnStartCamera.innerHTML = '<i class="fa-solid fa-video me-2"></i>Bật camera';
+            btnStartCamera.classList.replace('btn-danger', 'btn-dark');
+            livePreviewBox.style.display = 'none';
+            videoContainer.style.borderColor = '#333';
+            plateBuffer = [];
+        }
+    }
+
+    function autoCaptureAndScan() {
+        if (isProcessing || isPaused) return; 
+        isProcessing = true;
+        
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+        const capturedBase64 = canvas.toDataURL('image/jpeg', 0.8);
+        
+        sendToAPI(capturedBase64); 
+    }
+
+    // HÀM CHUNG: GỬI LÊN LẤY DỰ ĐOÁN TỪ AI
+    function sendToAPI(base64Data) {
+        let uploadBtn = document.getElementById('btnUpload');
+        let oldBtnText = uploadBtn.innerHTML;
+        if(document.getElementById('image-scan').classList.contains('active')){
+            uploadBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i>Đang xử lý...';
+            uploadBtn.disabled = true;
+        }
+
+        fetch('/scan', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ images: [base64Data] }) 
+        })
+        .then(response => response.json())
+        .then(data => {
+            isProcessing = false;
+            if(document.getElementById('image-scan').classList.contains('active')){
+                uploadBtn.innerHTML = oldBtnText;
+                uploadBtn.disabled = false;
+            }
+            
+            if (data.success && data.results.length > 0) {
+                let res = data.results[0];
+                
+                if (res.is_preview) {
+                    if (document.getElementById('image-scan').classList.contains('active')) {
+                        // ĐANG Ở TAB TẢI ẢNH: Bật popup luôn
+                        if (res.success && res.plate) {
+                            showConfirmModal(res.plate, res.predicted_action);
+                        } else {
+                            alert(res.message || "Ảnh quá mờ, không thấy rõ biển số!");
+                        }
+                    } else {
+                        // ĐANG Ở TAB CAMERA: Đọc 3 lần rồi mới bật Popup
+                        if (res.success && res.plate) {
+                            plateBuffer.push(res.plate);
+                            if (plateBuffer.length > 5) plateBuffer.shift(); 
+                            
+                            let matchCount = plateBuffer.filter(p => p === res.plate).length;
+                            livePreviewText.innerHTML = `<i class="fa-solid fa-crosshairs fa-spin text-warning me-2"></i>Biển: <span class="text-warning">${res.plate}</span> (${matchCount}/${REQUIRED_MATCHES})`;
+
+                            if (matchCount >= REQUIRED_MATCHES) {
+                                isPaused = true; 
+                                plateBuffer = [];
+                                livePreviewText.innerHTML = "Đang chờ xác nhận...";
+                                showConfirmModal(res.plate, res.predicted_action);
+                            }
+                        } else {
+                            livePreviewText.innerHTML = "Đang chờ xe...";
+                        }
+                    }
+                }
+            }
+        })
+        .catch(error => { 
+            isProcessing = false; 
+            if(document.getElementById('image-scan').classList.contains('active')){
+                uploadBtn.innerHTML = oldBtnText;
+                uploadBtn.disabled = false;
+            }
+        });
+    }
+
+    // ĐIỀU CHỈNH BẢNG POPUP THÔNG MINH
+    function showConfirmModal(plate, action) {
+        if (!confirmModal) {
+            confirmModal = new bootstrap.Modal(document.getElementById('confirmModal'));
+        }
+        plateToConfirm = plate;
+        document.getElementById('confirmPlate').innerText = plate;
+        
+        let actionEl = document.getElementById('confirmAction');
+        let titleEl = document.getElementById('modalTitle');
+        let headerEl = document.getElementById('modalHeader');
+        let btnConfirm = document.getElementById('btnConfirmSave');
+        let btnCancel = document.getElementById('btnCancelConfirm');
+
+        actionEl.innerText = action;
+        
+        // NẾU HẾT CHÕ
+        if (action.includes('Bãi đầy')) {
+            actionEl.className = 'fw-bold mb-0 text-danger';
+            titleEl.innerHTML = '<i class="fa-solid fa-ban fa-shake text-white me-2"></i>Từ chối xe vào';
+            headerEl.className = 'modal-header bg-danger text-white border-0 rounded-top-4';
+            
+            btnConfirm.style.display = 'none'; // Ẩn luôn nút đồng ý
+            btnCancel.innerHTML = '<i class="fa-solid fa-xmark me-2"></i>Đóng';
+            btnCancel.className = 'btn btn-danger btn-lg fw-bold px-4';
+        } else {
+            // NẾU BÌNH THƯỜNG (Check-in / Check-out)
+            if(action.includes('Check-in')) actionEl.className = 'fw-bold mb-0 text-primary';
+            else actionEl.className = 'fw-bold mb-0 text-warning';
+            
+            titleEl.innerHTML = '<i class="fa-solid fa-bell fa-shake text-dark me-2"></i>Yêu cầu xác nhận';
+            headerEl.className = 'modal-header bg-warning border-0 rounded-top-4';
+            
+            btnConfirm.style.display = 'inline-block'; // Hiện nút đồng ý
+            btnCancel.innerHTML = '<i class="fa-solid fa-xmark me-2"></i>Hủy bỏ';
+            btnCancel.className = 'btn btn-secondary btn-lg fw-bold px-4';
+        }
+
+        confirmModal.show();
+    }
+
+    function cancelConfirmation() {
+        confirmModal.hide();
+        isPaused = false; 
+        plateToConfirm = "";
+        livePreviewText.innerHTML = "Đang chờ xe...";
+    }
+
+    function confirmAndSave() {
+        confirmModal.hide();
+        
+        fetch('/scan', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ plate_to_save: plateToConfirm })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.results.length > 0) {
+                if(emptyState) emptyState.style.display = 'none';
+                let res = data.results[0];
+                let actionColor = res.action.includes('Check-in') ? 'text-primary' : 'text-danger';
+                
+                let html = `
+                <div class="alert alert-success border-0 shadow-sm mb-2 py-2 animation-slide-in">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="badge bg-dark fs-5 me-2">${res.plate}</span>
+                            <span class="${actionColor} fw-bold">${res.action}</span>
+                        </div>
+                        <div class="small text-muted"><i class="fa-regular fa-clock"></i> ${res.time.split(' ')[1]}</div>
+                    </div>
+                </div>`;
+                resultContainer.insertAdjacentHTML('afterbegin', html);
+                
+                setTimeout(() => { 
+                    isPaused = false; 
+                    livePreviewText.innerHTML = "Đang chờ xe...";
+                }, 2000);
+            }
+        });
+    }
+
+    document.getElementById('image-tab').addEventListener('click', stopCamera);
+</script>
+
+<style>
+    .animation-slide-in { animation: slideIn 0.3s ease-out forwards; }
+    @keyframes slideIn {
+        from { opacity: 0; transform: translateY(-10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+</style>
+{% endblock %}

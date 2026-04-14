@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    .elon-playground {
+        position: relative;
+        min-height: 80vh; 
+        width: 100%;
+    }
+
+    .hotspot-btn {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.8rem;
+        cursor: pointer;
+        color: #ffffff;
+        border: none;
+        background: radial-gradient(circle, rgba(255,255,255,0.95) 10%, rgba(135,206,250,0.6) 35%, rgba(0,191,255,0.2) 55%, transparent 70%);
+        box-shadow: 
+            0 0 15px rgba(255,255,255,0.8),
+            0 0 30px rgba(135,206,250,0.6),
+            0 0 50px rgba(0,191,255,0.5),
+            inset 0 0 20px rgba(255,255,255,1);
+        transition: all 0.3s ease;
+        animation: energy-float 2s ease-in-out infinite alternate;
+        z-index: 10;
+        text-shadow: 0 0 8px rgba(0, 0, 0, 0.6); 
+    }
+
+    .hotspot-btn:hover {
+        transform: scale(1.1);
+        box-shadow: 0 0 25px #fff, 0 0 50px #87cefa, 0 0 80px #00bfff, inset 0 0 30px #fff;
+    }
+
+    @keyframes energy-float {
+        0% { transform: scale(0.95) translateY(0); opacity: 0.85; filter: brightness(1); }
+        100% { 
+            transform: scale(1.05) translateY(-25px); 
+            opacity: 1; filter: brightness(1.2);
+            box-shadow: 0 0 25px rgba(255,255,255,1), 0 0 45px rgba(135,206,250,0.8), 0 0 75px rgba(0,191,255,0.7), inset 0 0 25px rgba(255,255,255,1); 
+        }
+    }
+
+    .info-panel {
+        position: absolute;
+        bottom: 100px; 
+        left: 50%;
+        transform: translateX(-50%) translateY(20px);
+        width: 320px;
+        background: #1e293b; 
+        border-radius: 16px;
+        border: 1px solid rgba(255, 255, 255, 0.1); 
+        padding: 15px;
+        display: none; 
+        flex-direction: column;
+        gap: 15px;
+        z-index: 100;
+        box-shadow: 0 15px 50px rgba(0, 0, 0, 0.6); 
+        opacity: 0;
+        transition: all 0.3s ease;
+        color: #f8fafc; 
+    }
+
+    .info-panel.show {
+        display: flex;
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+
+    .mini-card {
+        background: #0f172a; 
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 12px;
+        padding: 15px;
+        border-bottom: 3px solid;
+        box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.02);
+    }
+
+    .hand-left { position: fixed; bottom: 30%; left: 55vw; z-index: 50; }
+    .hand-right { position: fixed; bottom: 20%; right: 7vw; z-index: 50; }
+
+    @media (max-width: 992px) {
+        .hand-left, .hand-right { position: relative; bottom: auto; left: auto; right: auto; margin-bottom: 50px; }
+        .elon-playground { display: flex; flex-direction: column; align-items: center; justify-content: center; margin-top: 50px; }
+    }
+</style>
+
+<div class="elon-playground">
+    {% if session.get('role') == 'admin' %}
+        
+        <div class="hand-left">
+            <button class="hotspot-btn" onclick="togglePanel('panel-left')">
+                <i class="fa-solid fa-car"></i>
+            </button>
+            <div class="info-panel" id="panel-left">
+                <div class="mini-card" style="border-bottom-color: #3b82f6;">
+                    <p class="fw-bold mb-1 text-uppercase" style="font-size: 0.75rem; color: #60a5fa;"><i class="fa-solid fa-car-side me-1"></i>Xe trong bãi</p>
+                    <div class="fw-bold mb-0 fs-2 text-white">
+                        {{ active_count }} <span class="fs-5 fw-normal" style="color: #94a3b8;">/ {{ max_capacity }}</span>
+                    </div>
+                </div>
+                <div class="mini-card" style="border-bottom-color: {% if active_count >= max_capacity %}#ef4444{% else %}#10b981{% endif %};">
+                    <p class="fw-bold mb-1 text-uppercase" style="font-size: 0.75rem; color: {% if active_count >= max_capacity %}#fca5a5{% else %}#86efac{% endif %};"><i class="fa-solid fa-battery-three-quarters me-1"></i>Trạng thái</p>
+                    <div class="fw-bold mb-0 mt-1 fs-3" style="color: {% if active_count >= max_capacity %}#ef4444{% else %}#22c55e{% endif %};">
+                        {% if active_count >= max_capacity %}ĐÃ ĐẦY{% else %}CÒN TRỐNG{% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="hand-right">
+            <button class="hotspot-btn" onclick="togglePanel('panel-right')">
+                <i class="fa-solid fa-chart-pie"></i>
+            </button>
+            <div class="info-panel" id="panel-right">
+                <div class="mini-card" style="border-bottom-color: #8b5cf6;">
+                    <p class="fw-bold mb-1 text-uppercase" style="font-size: 0.75rem; color: #a78bfa;"><i class="fa-solid fa-arrow-right-arrow-left me-1"></i>Lượt xe (Vào/Ra)</p>
+                    <div class="fw-bold mb-0 mt-1 fs-3">
+                        <span style="color: #4ade80;">{{ daily_in | default(0) }}</span> 
+                        <span class="fs-6 fw-normal mx-1" style="color: #94a3b8;">/</span> 
+                        <span style="color: #f87171;">{{ daily_out | default(0) }}</span>
+                    </div>
+                </div>
+                <div class="mini-card" style="border-bottom-color: #f97316;">
+                    <p class="fw-bold mb-1 text-uppercase" style="font-size: 0.75rem; color: #fb923c;"><i class="fa-solid fa-hand-holding-dollar me-1"></i>Doanh thu ngày</p>
+                    <div class="fw-bold mb-0 mt-1 fs-3 text-white">
+                        {{ "{:,.0f}".format(daily_revenue | default(0)) }} <span class="fs-6 fw-normal" style="color: #fb923c;">đ</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    {% else %}
+        <div class="hand-left" style="position: fixed; left: 55vw; transform: translateX(-50%); bottom: 30%; z-index: 50;">
+            <button class="hotspot-btn" onclick="togglePanel('panel-user')">
+                <i class="fa-solid fa-user"></i>
+            </button>
+            <div class="info-panel" id="panel-user">
+                <div class="mini-card" style="border-bottom-color: #3b82f6;">
+                    <p class="fw-bold mb-1 text-uppercase" style="font-size: 0.75rem; color: #60a5fa;"><i class="fa-solid fa-user me-1"></i>Tài khoản</p>
+                    <div class="fw-bold mb-0 mt-1 fs-3 text-white">{{ session.get('username') }}</div>
+                </div>
+                <div class="mini-card" style="border-bottom-color: {% if fee_due > 0 %}#ef4444{% else %}#10b981{% endif %};">
+                    <p class="fw-bold mb-1 text-uppercase" style="font-size: 0.75rem; color: {% if fee_due > 0 %}#fca5a5{% else %}#86efac{% endif %};"><i class="fa-solid fa-file-invoice-dollar me-1"></i>Nợ cước</p>
+                    <div class="fw-bold mb-0 mt-1 fs-3" style="color: {% if fee_due > 0 %}#ef4444{% else %}#22c55e{% endif %};">
+                        {{ "{:,.0f}".format(fee_due | default(0)) }} đ
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<script>
+    function togglePanel(panelId) {
+        var panels = document.querySelectorAll('.info-panel');
+        var targetPanel = document.getElementById(panelId);
+        panels.forEach(p => { if (p.id !== panelId) p.classList.remove('show'); });
+        targetPanel.classList.toggle('show');
+    }
+    document.addEventListener('click', e => {
+        if (!e.target.closest('.hand-left') && !e.target.closest('.hand-right')) {
+            document.querySelectorAll('.info-panel').forEach(p => p.classList.remove('show'));
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Hệ thống quản lý bãi đỗ xe</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { 
+            background-image: url("{{ url_for('static', filename='images/elon_cuong1.jpg') }}");
+            background-size: cover; 
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            overflow-x: hidden;
+            background-color: #f1f5f9; 
+        }
+
+        .glass-card {
+            background-color: #ffffff !important;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1); 
+            border-radius: 12px;
+        }
+
+        main h1, main h2, main h3, main h4 {
+            background-color: #ffffff !important;
+            padding: 10px 20px !important;
+            border-radius: 12px !important;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05) !important;
+            width: fit-content !important; 
+            border: 1px solid #e2e8f0 !important;
+            margin-bottom: 25px !important;
+            color: #1e293b !important; 
+            display: block;
+        }
+
+        main .card h1, main .card h2, main .card h3, main .card h4,
+        main .glass-card h1, main .glass-card h2, main .glass-card h3, main .glass-card h4 {
+            background-color: transparent !important; padding: 0 !important; box-shadow: none !important;
+            border: none !important; width: auto !important; margin-bottom: 0 !important;
+        }
+
+        #sidebar {
+            width: 80px; 
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            background: #0f172a; 
+            z-index: 1040;
+            box-shadow: 4px 0 15px rgba(0,0,0,0.2);
+            overflow: hidden; 
+            white-space: nowrap; 
+        }
+        
+        #sidebar.expanded { width: 260px; }
+        #sidebar:not(.expanded) .sidebar-text { display: none !important; }
+        #sidebar:not(.expanded) .sidebar-link { justify-content: center; padding-left: 0; padding-right: 0; }
+        #sidebar:not(.expanded) .sidebar-logo-img { margin: 0 !important; }
+        
+        .sidebar-link { color: #cbd5e1; padding: 15px 20px; display: flex; align-items: center; text-decoration: none; transition: 0.2s; white-space: nowrap; }
+        .sidebar-link i { font-size: 1.5rem; min-width: 40px; text-align: center; transition: 0.2s; color: #cbd5e1; }
+        .sidebar-link:hover { color: #fff; background-color: rgba(255,255,255,0.05); }
+        .sidebar-link.active-link { color: #fff; background-color: rgba(255,255,255,0.1); border-left: 4px solid #0dcaf0; font-weight: bold; }
+        .sidebar-link.active-link i, .sidebar-link:hover i { transform: scale(1.15); }
+        
+        .sidebar-link.active-link .icon-home, .sidebar-link:hover .icon-home { color: #6ea8fe !important; }      
+        .sidebar-link.active-link .icon-camera, .sidebar-link:hover .icon-camera { color: #0dcaf0 !important; }  
+        .sidebar-link.active-link .icon-history, .sidebar-link:hover .icon-history { color: #ffda6a !important; }
+        .sidebar-link.active-link .icon-users, .sidebar-link:hover .icon-users { color: #6ea8fe !important; }    
+        .sidebar-link.active-link .icon-revenue, .sidebar-link:hover .icon-revenue { color: #75b798 !important; }
+        .sidebar-link.active-link .icon-profile, .sidebar-link:hover .icon-profile { color: #75b798 !important; }
+
+        .topbar { 
+            z-index: 1050; 
+            background-color: #0f172a; 
+            border-bottom: 1px solid rgba(255,255,255,0.1); 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+
+        .sidebar-logo-img { width: 45px; height: auto; border-radius: 8px; background-color: #ffffff; padding: 2px; }
+    </style>
+</head>
+<body class="d-flex vh-100">
+
+    <nav id="sidebar" class="d-flex flex-column flex-shrink-0 h-100">
+        <div class="p-3 text-white text-center border-bottom border-secondary d-flex align-items-center justify-content-center" style="height: 70px; border-color: rgba(255,255,255,0.1) !important;">
+            <img src="{{ url_for('static', filename='images/logo1.png') }}" alt="THCT Logo" class="sidebar-logo-img shadow-sm">
+            <span class="fs-5 fw-bold ms-2 sidebar-text tracking-wide">THCT Parking</span>
+        </div>
+        
+        <ul class="nav nav-pills flex-column mb-auto mt-3">
+            <li><a href="/" class="sidebar-link {% if request.path == '/' %}active-link{% endif %}"><i class="fa-solid fa-house icon-home"></i><span class="sidebar-text ms-2">Trang chủ</span></a></li>
+            
+            {% if session.get('role') == 'admin' %}
+            <li><a href="/scan_page" class="sidebar-link {% if request.path == '/scan_page' %}active-link{% endif %}"><i class="fa-solid fa-camera icon-camera"></i><span class="sidebar-text ms-2">Camera giám sát</span></a></li>
+            <li><a href="/history" class="sidebar-link {% if request.path == '/history' %}active-link{% endif %}"><i class="fa-solid fa-clock-rotate-left icon-history"></i><span class="sidebar-text ms-2">Quản lý bãi đỗ</span></a></li>
+            <li><a href="/manage" class="sidebar-link {% if request.path == '/manage' %}active-link{% endif %}"><i class="fa-solid fa-users icon-users"></i><span class="sidebar-text ms-2">Quản lý người dùng</span></a></li>
+            <li><a href="/revenue" class="sidebar-link {% if request.path == '/revenue' %}active-link{% endif %}"><i class="fa-solid fa-chart-simple icon-revenue"></i><span class="sidebar-text ms-2">Báo cáo doanh thu</span></a></li>
+            {% else %}
+            <li><a href="/profile" class="sidebar-link {% if request.path == '/profile' %}active-link{% endif %}"><i class="fa-solid fa-money-check-dollar icon-profile"></i><span class="sidebar-text ms-2">Thanh toán dịch vụ</span></a></li>
+            <li><a href="/history" class="sidebar-link {% if request.path == '/history' %}active-link{% endif %}"><i class="fa-solid fa-clock-rotate-left icon-history"></i><span class="sidebar-text ms-2">Lịch sử gửi xe</span></a></li>
+            {% endif %}
+        </ul>
+        
+        <div class="border-top p-2" style="border-color: rgba(255,255,255,0.1) !important;">
+            <a href="#" class="sidebar-link text-light opacity-75 hover-opacity-100" data-bs-toggle="modal" data-bs-target="#founderModal">
+                <i class="fa-solid fa-circle-info"></i><span class="sidebar-text ms-2">&copy; THCT Parking</span>
+            </a>
+        </div>
+    </nav>
+
+    <div class="flex-grow-1 d-flex flex-column overflow-hidden">
+        
+        <header class="topbar d-flex align-items-center justify-content-between px-4 py-2" style="height: 70px;">
+            
+            <div class="d-flex align-items-center gap-3">
+                <button class="btn btn-link text-white p-0 border-0 shadow-none d-flex align-items-center justify-content-center" id="toggleSidebar" style="width: 40px; height: 40px; text-decoration: none;">
+                    <i class="fa-solid fa-bars fs-4"></i>
+                </button>
+                
+            <div class="d-none d-sm-flex align-items-center fw-bold fs-5 text-white ms-2" style="letter-spacing: 0.5px;">
+                <i class="fa-solid fa-gauge-high me-2 text-white"></i> Welcome to THCT Parking
+            </div>
+            </div>
+            
+            <div class="d-flex align-items-center gap-3">
+                <div class="d-none d-md-flex align-items-center px-2 py-1">
+                    <i class="fa-regular fa-clock text-info fs-5 me-2"></i>
+                    <span id="globalClock" class="fw-bold text-white fs-6" style="letter-spacing: 1px;">00:00:00</span>
+                    <span class="mx-2 text-light opacity-75 fw-bold">|</span>
+                    <span id="globalDate" class="text-light fw-bold small">00/00/0000</span>
+                </div>
+                
+                <div class="dropdown">
+                    <button class="btn btn-transparent dropdown-toggle fw-bold border-0 bg-transparent text-white d-flex align-items-center" type="button" id="userMenu" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fa-solid fa-circle-user text-warning fs-3 me-2" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));"></i> 
+                        <span>Xin chào, {{ session.get('username') }}!</span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 mt-3 rounded-3 bg-dark" aria-labelledby="userMenu">
+                        <li><a class="dropdown-item fw-bold py-2 text-white" href="/profile"><i class="fa-solid fa-user-pen text-info me-2"></i> Hồ sơ cá nhân</a></li>
+                        <li><hr class="dropdown-divider border-secondary"></li>
+                        <li><a class="dropdown-item fw-bold text-danger py-2" href="/logout"><i class="fa-solid fa-arrow-right-from-bracket me-2"></i> Đăng xuất</a></li>
+                    </ul>
+                </div>
+            </div>
+        </header>
+
+        <main class="p-4 flex-grow-1 overflow-auto">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+
+    <div class="modal fade" id="founderModal" tabindex="-1" aria-labelledby="founderModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow-lg rounded-4">
+                <div class="modal-header border-0 rounded-top-4" style="background: #0f172a !important;">
+                    <h5 class="modal-title fw-bold text-white" id="founderModalLabel"><i class="fa-solid fa-code me-2"></i>Đội ngũ phát triển</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4 text-center bg-white">
+                    <img src="https://cdn-icons-png.flaticon.com/512/2082/2082875.png" alt="Team" width="80" class="mb-4">
+                    <div class="row g-3 text-start">
+                        <div class="col-12"><div class="p-3 rounded-3 border-start border-4 border-primary shadow-sm" style="background-color: #e2e8f0;"><h6 class="fw-bold mb-1 text-primary">Chử Anh Tú</h6><p class="mb-0 small text-secondary fw-medium"><i class="fa-solid fa-microchip me-1"></i> Xây dựng thuật toán nhận diện</p></div></div>
+                        <div class="col-12"><div class="p-3 rounded-3 border-start border-4 border-success shadow-sm" style="background-color: #e2e8f0;"><h6 class="fw-bold mb-1 text-success">Lê Đình Hoàng</h6><p class="mb-0 small text-secondary fw-medium"><i class="fa-solid fa-server me-1"></i> Phát triển Backend & Database</p></div></div>
+                        <div class="col-12"><div class="p-3 rounded-3 border-start border-4 border-warning shadow-sm" style="background-color: #e2e8f0;"><h6 class="fw-bold mb-1 text-warning" style="filter: brightness(0.85);">Nguyễn Văn Cường</h6><p class="mb-0 small text-secondary fw-medium"><i class="fa-solid fa-laptop-code me-1"></i> Thiết kế giao diện UI/UX</p></div></div>
+                        <div class="col-12"><div class="p-3 rounded-3 border-start border-4 border-danger shadow-sm" style="background-color: #e2e8f0;"><h6 class="fw-bold mb-1 text-danger">Đinh Quốc Toàn</h6><p class="mb-0 small text-secondary fw-medium"><i class="fa-solid fa-bug-slash me-1"></i> Kiểm thử hệ thống</p></div></div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 justify-content-center pb-4 bg-white rounded-bottom-4">
+                    <button type="button" class="btn btn-secondary fw-bold rounded-pill px-4" data-bs-dismiss="modal">Đóng</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.getElementById('toggleSidebar').addEventListener('click', function() {
+            document.getElementById('sidebar').classList.toggle('expanded');
+        });
+
+        function updateGlobalClock() {
+            const now = new Date();
+            const clockEl = document.getElementById('globalClock');
+            const dateEl = document.getElementById('globalDate');
+            if(clockEl && dateEl) {
+                clockEl.innerText = now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                dateEl.innerText = now.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+            }
+        }
+        setInterval(updateGlobalClock, 1000);
+        updateGlobalClock();
+    </script>
+</body>
+</html>
